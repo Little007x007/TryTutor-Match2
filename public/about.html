@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TryTutor Match - ระบบจับคู่ติวหนังสือออนไลน์สำหรับนักเรียนมัธยมศึกษา พัฒนาโดยทีม IS โรงเรียน Tune">
+    <title>เกี่ยวกับฉัน - TryTutor Match</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="components/nav.js"></script>
+</head>
+<body class="bg-gray-200">
+    <!-- Navbar -->
+    <div id="navbar"></div>
+
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <!-- ส่วนหัว -->
+            <div class="bg-gray-800 text-white p-8 text-center">
+                <h1 class="text-3xl font-bold mb-4">TryTutor Match</h1>
+                <p class="text-xl">ระบบจับคู่ติวหนังสือออนไลน์</p>
+            </div>
+
+            <!-- ข้อมูลผู้พัฒนา -->
+            <div class="p-8">
+                <h2 class="text-2xl font-bold mb-6">ทีมผู้พัฒนา</h2>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- คนที่ 1 -->
+                    <div class="text-center">
+                        <img src="../img/1.jpg" alt="Profile 1"
+                             class="w-48 h-48 rounded-full mx-auto mb-4 object-cover"/>
+                        <h3 class="text-xl font-bold">นายจิตติพัฒน์ พรพุฒิบุญญา</h3>
+                        <p class="text-gray-600">รหัสนักเรียน 35478</p>
+                        <p class="text-gray-600">ชั้นมัธยมศึกษาปีที่5/15</p>
+                        <div class="mt-2">
+                            <a href="mailto:s35478@tune.ac.th" class="text-blue-600 hover:underline">s35478@tune.ac.th</a>
+                        </div>
+                    </div>
+
+                    <!-- คนที่ 2 -->
+                    <div class="text-center">
+                        <img src="../img/2.jpg" alt="Profile 2" 
+                             class="w-48 h-48 rounded-full mx-auto mb-4 object-cover"/>
+                        <h3 class="text-xl font-bold">นายณัฐภูมิ พลอาสา</h3>
+                        <p class="text-gray-600">รหัสนักเรียน 35480</p>
+                        <p class="text-gray-600">ชั้นมัธยมศึกษาปีที่5/15</p>
+                        <div class="mt-2">
+                            <a href="mailto:s35480@tune.ac.th" class="text-blue-600 hover:underline">s35480@tune.ac.th</a>
+                        </div>
+                    </div>
+
+                    <!-- คนที่ 3 -->
+                    <div class="text-center">
+                        <img src="../img/3.jpg" alt="Profile 3" 
+                             class="w-48 h-48 rounded-full mx-auto mb-4 object-cover"/>
+                        <h3 class="text-xl font-bold">นายศุภกิตติ์ หาริตะวัน</h3>
+                        <p class="text-gray-600">รหัสนักเรียน 35488</p>
+                        <p class="text-gray-600">ชั้นมัธยมศึกษาปีที่5/15</p>
+                        <div class="mt-2">
+                            <a href="mailto:s35488@tune.ac.th" class="text-blue-600 hover:underline">s35488@tune.ac.th</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- รายละเอียดโครงงาน -->
+            <div class="bg-gray-50 p-8">
+                <h2 class="text-2xl font-bold mb-6">เกี่ยวกับโครงงาน</h2>
+                <p>โครงงานนี้เป็นส่วนหนึ่งของรายวิชา Independent Study (IS) </p>
+                <p class="font-semibold mt-4">เทคโนโลยีที่ใช้:</p>
+                <ul class="list-disc list-inside ml-4">
+                    <li>Frontend: HTML, Tailwind CSS, JavaScript</li>
+                    <li>Backend: Node.js, Express</li>
+                    <li>Real-time Communication: Socket.IO</li>
+                    <li>AI Integration: Google Gemini API</li>
+                </ul>
+            </div>
+
+            <!-- ลิงก์กลับ -->
+            <div class="p-8 text-center">
+                <button onclick="window.location.href='index.html'" class="bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-700">
+                    กลับหน้าหลัก
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

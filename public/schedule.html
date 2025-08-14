@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตารางเวลา</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="components/nav.js"></script>
+</head>
+<body class="bg-gray-200">
+    <div class="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">ตารางเวลา</h1>
+            <div class="space-x-2">
+                <button onclick="saveSchedule()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-500">
+                    บันทึก
+                </button>
+                <button onclick="clearSchedule()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-500">
+                    ล้างตาราง
+                </button>
+            </div>
+        </div>
+
+        <!-- แถบแสดงเวลาที่เหลือ -->
+        <div id="activeTimer" class="mb-4 bg-gray-100 p-4 rounded-lg text-center hidden border border-gray-300">
+            <span class="text-xl font-bold">เวลาที่เหลือ: <span id="countdown" class="text-gray-700">00:00</span></span>
+        </div>
+
+        <div class="bg-gray-50 rounded-lg shadow-lg p-2 sm:p-6 overflow-x-auto">
+            <table class="w-full text-sm sm:text-base">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="border border-gray-300 p-2 min-w-[80px]">เวลา</th>
+                        <th class="border p-2 min-w-[100px]">จันทร์</th>
+                        <th class="border p-2 min-w-[100px]">อังคาร</th>
+                        <th class="border p-2 min-w-[100px]">พุธ</th>
+                        <th class="border p-2 min-w-[100px]">พฤหัส</th>
+                        <th class="border p-2 min-w-[100px]">ศุกร์</th>
+                        <th class="border p-2 min-w-[100px]">ตัวเลือก</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleBody">
+                    <!-- ตารางถูกสร้างด้วย JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <a href="index.html" class="bg-gray-700 text-white px-6 py-3 rounded-lg inline-block text-lg hover:bg-gray-600">กลับหน้าหลัก</a>
+        </div>
+    </div>
+
+    <script>
+        let currentTimer = null;
+        const STORAGE_KEY = 'schedule_data';
+        
+        // สร้างข้อมูลเวลา
+        const timeSlots = [
+            "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
+            "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00", "16:00 - 17:00"
+        ];
+
+        // โหลดข้อมูลจาก localStorage
+        function loadSchedule() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : createEmptySchedule();
+        }
+
+        // สร้างตารางเปล่า
+        function createEmptySchedule() {
+            return timeSlots.map(time => ({
+                time,
+                mon: '', tue: '', wed: '', thu: '', fri: ''
+            }));
+        }
+
+        // บันทึกข้อมูล
+        function saveSchedule() {
+            const schedule = [];
+            const rows = document.querySelectorAll('#scheduleBody tr');
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                schedule.push({
+                    time: cells[0].textContent,
+                    mon: cells[1].textContent,
+                    tue: cells[2].textContent,
+                    wed: cells[3].textContent,
+                    thu: cells[4].textContent,
+                    fri: cells[5].textContent
+                });
+            });
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(schedule));
+            alert('บันทึกข้อมูลสำเร็จ');
+        }
+
+        // ล้างตาราง
+        function clearSchedule() {
+            if (confirm('ต้องการล้างตารางทั้งหมดหรือไม่?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                renderSchedule(createEmptySchedule());
+            }
+        }
+
+        // แสดงผลตาราง
+        function renderSchedule(schedule) {
+            const tbody = document.getElementById('scheduleBody');
+            tbody.innerHTML = '';
+
+            schedule.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                // เซลล์เวลา
+                const timeCell = document.createElement('td');
+                timeCell.className = 'border border-gray-300 p-2';
+                timeCell.textContent = row.time;
+                tr.appendChild(timeCell);
+
+                // เซลล์วิชา
+                ['mon', 'tue', 'wed', 'thu', 'fri'].forEach(day => {
+                    const td = document.createElement('td');
+                    td.className = 'border border-gray-300 p-2 hover:bg-gray-100 cursor-pointer';
+                    td.textContent = row[day] || '-';
+                    td.onclick = () => editCell(td);
+                    tr.appendChild(td);
+                });
+
+                // เซลล์ตัวเลือก
+                const optionsCell = document.createElement('td');
+                optionsCell.className = 'border border-gray-300 p-2';
+                optionsCell.innerHTML = `
+                    <button onclick="startTimer(60)" class="bg-gray-700 text-white px-2 py-1 rounded text-sm hover:bg-gray-600">
+                        60 นาที
+                    </button>
+                `;
+                tr.appendChild(optionsCell);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // แก้ไขเซลล์
+        function editCell(cell) {
+            const currentValue = cell.textContent === '-' ? '' : cell.textContent;
+            const newValue = prompt('ใส่ชื่อวิชา:', currentValue);
+            if (newValue !== null) {
+                cell.textContent = newValue.trim() || '-';
+            }
+        }
+
+        // จัดการตัวจับเวลา
+        function startTimer(minutes) {
+            if (currentTimer) {
+                clearInterval(currentTimer);
+            }
+
+            const activeTimer = document.getElementById('activeTimer');
+            const countdown = document.getElementById('countdown');
+            let timeLeft = minutes * 60;
+
+            activeTimer.classList.remove('hidden');
+            
+            function updateDisplay() {
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                countdown.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            updateDisplay();
+
+            currentTimer = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+
+                if (timeLeft <= 0) {
+                    clearInterval(currentTimer);
+                    activeTimer.classList.add('hidden');
+                    alert('หมดเวลา!');
+                }
+            }, 1000);
+        }
+
+        // โหลดและแสดงตารางเมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSchedule(loadSchedule());
+        });
+    </script>
+</body>
+</html>

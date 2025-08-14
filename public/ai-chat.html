@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI ช่วยตอบคำถาม</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-center mb-6">AI ช่วยตอบคำถาม</h1>
+            
+            <div id="chatBox" class="h-[70vh] overflow-y-auto border rounded p-4 mb-4 space-y-3 bg-gray-50"></div>
+            
+            <div class="flex gap-2">
+                <input type="text" 
+                       id="messageInput" 
+                       class="flex-1 p-3 border rounded-lg"
+                       placeholder="พิมพ์คำถามของคุณ..."
+                       onkeypress="if(event.key === 'Enter') sendMessage()">
+                <button onclick="sendMessage()" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-500 transition-colors">
+                    ส่ง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CLAUDE_API_KEY = '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'; // ใส่ API key ของ Claude
+        const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+        
+        const chatBox = document.getElementById('chatBox');
+        const messageInput = document.getElementById('messageInput');
+
+        // เพิ่มข้อความต้อนรับ
+        addMessage('AI', 'สวัสดี! ฉันพร้อมช่วยตอบคำถามของคุณ');
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            addMessage('คุณ', message);
+            messageInput.value = '';
+
+            const loadingId = Date.now();
+            addMessage('AI', '...กำลังคิดคำตอบ...', loadingId);
+
+            try {
+                const response = await fetch(CLAUDE_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': CLAUDE_API_KEY,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-3-opus-20240229',
+                        max_tokens: 1000,
+                        messages: [{
+                            role: 'user',
+                            content: `กรุณาตอบคำถามต่อไปนี้เป็นภาษาไทย: ${message}`
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                document.getElementById(`msg-${loadingId}`)?.remove();
+
+                if (data.content) {
+                    addMessage('AI', data.content[0].text);
+                } else {
+                    throw new Error('Invalid response format');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById(`msg-${loadingId}`)?.remove();
+                addMessage('AI', 'ขออภัย เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+            }
+        }
+
+        function addMessage(sender, text, id = null) {
+            const div = document.createElement('div');
+            div.className = `flex ${sender === 'คุณ' ? 'justify-end' : 'justify-start'}`;
+            if (id) div.id = `msg-${id}`;
+
+            const message = document.createElement('div');
+            message.className = `max-w-[80%] p-3 rounded-lg ${
+                sender === 'คุณ' 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-white border'
+            }`;
+
+            message.innerHTML = `
+                <div class="text-sm font-bold mb-1">${sender}</div>
+                <div class="whitespace-pre-wrap">${text}</div>
+            `;
+
+            div.appendChild(message);
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Handle Enter key
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

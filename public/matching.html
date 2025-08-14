@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จับคู่ติวหนังสือ - TryTutor Match</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- ส่วนข้อมูลผู้ใช้ -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-4">ข้อมูลของคุณ</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 mb-2">ชื่อ</label>
+                    <input type="text" id="username" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">ระดับชั้น</label>
+                    <select id="grade" class="w-full p-2 border rounded">
+                        <option value="m4">ม.4</option>
+                        <option value="m5">ม.5</option>
+                        <option value="m6">ม.6</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 mb-2">สถานะของคุณ</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center">
+                            <input type="radio" name="role" value="want_help" checked 
+                                   class="mr-2 text-blue-600">
+                            ต้องการความช่วยเหลือ
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="role" value="can_help" 
+                                   class="mr-2 text-blue-600">
+                            สามารถช่วยเหลือได้
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ส่วนการจับคู่ -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-4">จับคู่เรียน</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 mb-2">วิชาที่ต้องการ</label>
+                    <select id="subject" class="w-full p-2 border rounded">
+                        <option value="">-- เลือกวิชา --</option>
+                        <option value="biology">ชีววิทยา</option>
+                        <option value="social">สังคมศึกษา</option>
+                    </select>
+                </div>
+                <button onclick="startMatching()" 
+                        id="matchBtn"
+                        class="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-500">
+                    เริ่มค้นหาคู่
+                </button>
+            </div>
+        </div>
+
+        <!-- แสดงเวลาและสถานะ -->
+        <div id="matchingStatus" class="bg-white rounded-lg shadow-lg p-6 hidden">
+            <div class="text-center">
+                <div class="text-2xl font-bold mb-2">กำลังค้นหาคู่...</div>
+                <div class="text-4xl font-bold text-blue-600 mb-4" id="timer">00:00</div>
+                <button onclick="cancelMatching()"
+                        class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-500">
+                    ยกเลิก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let matchInterval;
+        let searchTimeout;
+
+        function startMatching() {
+            const userData = {
+                username: document.getElementById('username').value,
+                grade: document.getElementById('grade').value,
+                subject: document.getElementById('subject').value,
+                role: document.querySelector('input[name="role"]:checked').value
+            };
+
+            // เพิ่มการตรวจสอบข้อมูล
+            if (!userData.username) {
+                alert('กรุณากรอกชื่อ');
+                return;
+            }
+            if (!userData.subject) {
+                alert('กรุณาเลือกวิชา');
+                return;
+            }
+
+            console.log('Starting match with data:', userData); // เพิ่ม log
+
+            // แสดงส่วนแสดงสถานะการจับคู่
+            document.getElementById('matchingStatus').classList.remove('hidden');
+            document.getElementById('matchBtn').disabled = true;
+
+            // เริ่มจับเวลา
+            let seconds = 0;
+            matchInterval = setInterval(() => {
+                seconds++;
+                const minutes = Math.floor(seconds / 60);
+                const remainSeconds = seconds % 60;
+                document.getElementById('timer').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${remainSeconds.toString().padStart(2, '0')}`;
+            }, 1000);
+
+            // ส่งข้อมูลไปหาคู่
+            socket.emit('find_match', userData);
+
+            // ตั้งเวลาถ้าหาคู่ไม่เจอใน 1 นาที
+            searchTimeout = setTimeout(() => {
+                if (confirm('ไม่พบคู่ที่เหมาะสม ต้องการลองใหม่หรือไม่?')) {
+                    cancelMatching();
+                    startMatching();
+                } else {
+                    cancelMatching();
+                }
+            }, 60000);
+        }
+
+        function cancelMatching() {
+            clearInterval(matchInterval);
+            clearTimeout(searchTimeout);
+            document.getElementById('matchingStatus').classList.add('hidden');
+            document.getElementById('matchBtn').disabled = false;
+            socket.emit('cancel_match');
+        }
+
+        // รับการแจ้งเตือนเมื่อจับคู่สำเร็จ
+        socket.on('match_found', (matchData) => {
+            console.log('Match found:', matchData); // เพิ่ม log
+            clearInterval(matchInterval);
+            clearTimeout(searchTimeout);
+
+            // ซ่อนส่วนแสดงสถานะการจับคู่
+            document.getElementById('matchingStatus').classList.add('hidden');
+            
+            try {
+                // สร้าง URL และเปลี่ยนหน้าทันที
+                const chatUrl = `/chat.html?matchId=${matchData.matchId}&partner=${encodeURIComponent(matchData.partnerName)}`;
+                console.log('Redirecting to:', chatUrl);
+                
+                // ใช้ location.replace แทน location.href
+                window.location.replace(chatUrl);
+            } catch (error) {
+                console.error('Redirect error:', error);
+                alert('เกิดข้อผิดพลาดในการเข้าห้องแชท กรุณาลองใหม่อีกครั้ง');
+            }
+        });
+    </script>
+</body>
+</html>

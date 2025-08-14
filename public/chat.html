@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แชท - TryTutor Match</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <!-- Chat Header -->
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold" id="chatHeader">แชท</h1>
+                <button onclick="if(confirm('ต้องการออกจากห้องแชทหรือไม่?')) window.location.href='/matching.html'" 
+                        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    ออกจากห้องแชท
+                </button>
+            </div>
+
+            <!-- Chat Box -->
+            <div id="chatBox" class="h-[60vh] overflow-y-auto border rounded-lg p-4 mb-4 space-y-3 bg-gray-50"></div>
+
+            <!-- Input Area -->
+            <div class="flex gap-2">
+                <input type="text" 
+                       id="messageInput" 
+                       class="flex-1 p-3 border rounded-lg"
+                       placeholder="พิมพ์ข้อความ..."
+                       onkeypress="if(event.key === 'Enter') sendMessage()">
+                <button onclick="sendMessage()" 
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-500">
+                    ส่ง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const chatBox = document.getElementById('chatBox');
+        const messageInput = document.getElementById('messageInput');
+        
+        // รับพารามิเตอร์จาก URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const matchId = urlParams.get('matchId');
+        const partnerName = decodeURIComponent(urlParams.get('partner') || '');
+
+        if (!matchId) {
+            window.location.href = '/matching.html';
+        }
+
+        // แสดงชื่อคู่สนทนา
+        if (partnerName) {
+            document.getElementById('chatHeader').textContent = `แชทกับ ${partnerName}`;
+        }
+
+        socket.emit('join_chat', { matchId });
+
+        socket.on('chat_message', (data) => {
+            const isOwnMessage = data.sender === socket.id;
+            addMessage(isOwnMessage ? 'คุณ' : 'คู่สนทนา', data.message, isOwnMessage);
+        });
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            socket.emit('chat_message', { matchId, message });
+            messageInput.value = '';
+        }
+
+        function addMessage(sender, text, isOwn) {
+            const div = document.createElement('div');
+            div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'}`;
+            
+            const message = document.createElement('div');
+            message.className = `max-w-[70%] p-3 rounded-lg ${
+                isOwn ? 'bg-blue-500 text-white' : 'bg-gray-200'
+            }`;
+            
+            message.innerHTML = `
+                <div class="text-sm font-bold mb-1">${sender}</div>
+                <div class="break-words">${text}</div>
+            `;
+            
+            div.appendChild(message);
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Auto-scroll
+        new MutationObserver(() => {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }).observe(chatBox, { childList: true });
+    </script>
+</body>
+</html>

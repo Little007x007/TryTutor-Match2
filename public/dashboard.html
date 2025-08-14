@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แดชบอร์ด - TryTutor Match</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="components/nav.js"></script>
+</head>
+<body class="bg-gray-200">
+    <div class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- ส่วนแสดงข้อมูลผู้ใช้ -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-4">ข้อมูลผู้ใช้</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-2">ชื่อผู้ใช้</th>
+                                <th class="p-2">ระดับชั้น</th>
+                                <th class="p-2">วิชา</th>
+                                <th class="p-2">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTable">
+                            <!-- ข้อมูลจะถูกเพิ่มด้วย JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ส่วนแสดงประวัติการแชท -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-4">ประวัติการแชท</h2>
+                <div class="space-y-4" id="chatHistory">
+                    <!-- ประวัติแชทจะถูกเพิ่มด้วย JavaScript -->
+                </div>
+            </div>
+            
+            <!-- ส่วนแสดงสถิติ -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-4">สถิติการใช้งาน</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-blue-50 rounded-lg">
+                        <div class="text-xl font-bold text-blue-600" id="totalUsers">0</div>
+                        <div class="text-sm text-gray-600">ผู้ใช้ทั้งหมด</div>
+                    </div>
+                    <div class="p-4 bg-green-50 rounded-lg">
+                        <div class="text-xl font-bold text-green-600" id="activeUsers">0</div>
+                        <div class="text-sm text-gray-600">ผู้ใช้ออนไลน์</div>
+                    </div>
+                    <div class="p-4 bg-purple-50 rounded-lg">
+                        <div class="text-xl font-bold text-purple-600" id="totalChats">0</div>
+                        <div class="text-sm text-gray-600">การแชททั้งหมด</div>
+                    </div>
+                    <div class="p-4 bg-yellow-50 rounded-lg">
+                        <div class="text-xl font-bold text-yellow-600" id="aiChats">0</div>
+                        <div class="text-sm text-gray-600">การแชทกับ AI</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ส่วนค้นหาและกรอง -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-4">ค้นหาและกรอง</h2>
+                <div class="space-y-4">
+                    <input type="text" 
+                           id="searchInput" 
+                           placeholder="ค้นหาผู้ใช้..." 
+                           class="w-full p-2 border rounded">
+                    <select id="filterGrade" class="w-full p-2 border rounded">
+                        <option value="">ทุกระดับชั้น</option>
+                        <option value="m4">ม.4</option>
+                        <option value="m5">ม.5</option>
+                        <option value="m6">ม.6</option>
+                    </select>
+                    <select id="filterSubject" class="w-full p-2 border rounded">
+                        <option value="">ทุกวิชา</option>
+                        <option value="biology">ชีววิทยา</option>
+                        <option value="social">สังคมศึกษา</option>
+                    </select>
+                    <button onclick="applyFilters()" 
+                            class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-500">
+                        ค้นหา
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userData = [];
+        let chatHistory = [];
+        let activeUsers = new Set(); // เก็บ ID ของผู้ใช้ที่ออนไลน์
+
+        // เชื่อมต่อ Socket.IO
+        const socket = io();
+
+        // รับข้อมูลผู้ใช้ออนไลน์
+        socket.on('online_users', (users) => {
+            activeUsers = new Set(users);
+            updateStats();
+        });
+
+        // โหลดข้อมูลเมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Promise.all([
+                loadUserData(),
+                loadChatHistory()
+            ]);
+            updateStats();
+            setupSearch();
+            
+            // ร้องขอข้อมูลผู้ใช้ออนไลน์
+            socket.emit('request_online_users');
+        });
+
+        // โหลดข้อมูลผู้ใช้
+        async function loadUserData() {
+            try {
+                const response = await fetch('/api/users');
+                userData = await response.json();
+                renderUserTable(userData);
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        // โหลดประวัติแชท
+        async function loadChatHistory() {
+            try {
+                const response = await fetch('/api/chats');
+                chatHistory = await response.json();
+                renderChatHistory(chatHistory);
+            } catch (error) {
+                console.error('Error loading chat history:', error);
+            }
+        }
+
+        // แสดงตารางผู้ใช้
+        function renderUserTable(users) {
+            const table = document.getElementById('userTable');
+            table.innerHTML = users.map(user => `
+                <tr class="border-b">
+                    <td class="p-2">${user.username}</td>
+                    <td class="p-2">${user.grade}</td>
+                    <td class="p-2">${user.subjects.join(', ')}</td>
+                    <td class="p-2">
+                        <span class="px-2 py-1 rounded-full text-xs ${user.online ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                            ${user.online ? 'ออนไลน์' : 'ออฟไลน์'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // แสดงประวัติแชท
+        function renderChatHistory(chats) {
+            const history = document.getElementById('chatHistory');
+            history.innerHTML = chats.map(chat => `
+                <div class="p-3 border rounded">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="font-bold">${chat.sender} → ${chat.receiver}</div>
+                        <div class="text-sm text-gray-500">
+                            ${new Date(chat.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+                    <div class="text-gray-600">${chat.message}</div>
+                </div>
+            `).join('');
+        }
+
+        // อัพเดทสถิติ
+        function updateStats() {
+            const stats = calculateStats();
+            document.getElementById('totalUsers').textContent = stats.totalUsers;
+            document.getElementById('activeUsers').textContent = activeUsers.size;
+            document.getElementById('totalChats').textContent = stats.totalChats;
+            document.getElementById('aiChats').textContent = stats.aiChats;
+        }
+
+        // คำนวณสถิติ
+        function calculateStats() {
+            return {
+                totalUsers: userData.length,
+                totalChats: chatHistory.length,
+                aiChats: chatHistory.filter(chat => chat.receiver === 'AI Tutor').length
+            };
+        }
+
+        // ตั้งค่าการค้นหา
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                const filtered = userData.filter(user => 
+                    user.username.toLowerCase().includes(searchTerm)
+                );
+                renderUserTable(filtered);
+            });
+        }
+
+        // กรองข้อมูล
+        function applyFilters() {
+            const grade = document.getElementById('filterGrade').value;
+            const subject = document.getElementById('filterSubject').value;
+            
+            let filtered = [...userData];
+            
+            if (grade) {
+                filtered = filtered.filter(user => user.grade === grade);
+            }
+            
+            if (subject) {
+                filtered = filtered.filter(user => user.subjects.includes(subject));
+            }
+            
+            renderUserTable(filtered);
+        }
+    </script>
+</body>
+</html>
